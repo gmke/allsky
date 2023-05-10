@@ -1,19 +1,23 @@
 images/*
-capture
-config.sh
-dark.*
-gibbons*
-liveview*
-image-resize.jpg
-data.json
+darks/*
+scripts/endOfNight_additionalSteps.sh
+
+# development artifacts
+src/*.a
+*.o
+*.core
+*.gcda
+gmon.out
+.*.sw[pomnq]
+
+# generated binaries
+capture_ZWO
+capture_RPiHQ
 keogram
-log.txt
-settings.json
 startrails
-scripts/data.json
-scripts/ftp-settings.sh
-scripts/keogram_and_startrails.sh
-scripts/keogram_only.sh
-scripts/startrails_manual.sh
-scripts/startrails_only.sh
-scripts/stretch.sh
+sunwait
+
+# misc
+.vscode/configurationCache.log
+.vscode/targets.log
+.vscode/dryrun.log

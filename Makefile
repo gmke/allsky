@@ -1,52 +1,59 @@
-platform = armv7
+platform = $(shell uname -m)
+prefix =
 
-#INCLIB = /usr/local/include
-#LDLIB = /usr/local/lib
-OPENCV = $(shell pkg-config --cflags opencv) $(shell pkg-config --libs opencv)
-USB =  -I libusb/ -L libusb/  
-LIBSPATH = -L../lib/$(platform) -I../include
-DEFS = -D_LIN -D_DEBUG 
+sysconfdir = ${prefix}/etc
+exec_prefix = /usr
+bindir = ${exec_prefix}/bin
+libexecdir = ${exec_prefix}/libexec/allsky
+sharedir = ${exec_prefix}/share/allsky
 
-CFLAGS = -Wall -Wno-psabi -g  -I $(INCLIB) -L $(LDLIB) $(DEFS) $(COMMON) $(LIBSPATH)  -lpthread  $(USB) -DGLIBC_20
+.DEFAULT_GOAL := all
 
-ifeq ($(platform), armv6)
-CC = arm-linux-gnueabihf-g++
-AR= arm-linux-gnueabihf-ar
-CFLAGS += -march=armv6
-CFLAGS += -lrt
+ROOTCHECK=$(shell id -u)
+ifneq ($(ROOTCHECK),0)
+  ifeq ($(PKGBUILD),1)
+    ROOTCHECK=0
+  endif
 endif
 
-ifeq ($(platform), armv7)
-CC = arm-linux-gnueabihf-g++
-AR= arm-linux-gnueabihf-ar
-CFLAGS += -march=armv7 -mthumb
+ifeq ($(PKGBUILD),)
+  PKGBUILD=0
 endif
 
+%:
+	@make -C src $@
+	@make -C config_repo $@
+	@make -C notification_images $@
+	@make -C scripts $@
 
-all:capture startrails keogram sunwait-remove-precompiled sunwait
+deps:
+	@make -C src $@
 
-sunwait-remove-precompiled:
-ifneq ("arm", $(findstring $(platform), "arm"))
-	@rm -f sunwait
+.PHONY : deps
+
+install:
+ifneq ($(ROOTCHECK), 0)
+	@echo This must be run with root permissions.
+	@echo Please run \'sudo make install\'
+else
+	@echo `date +%F\ %R:%S` Starting install...
+	@make -C src $@
+	@make -C config_repo $@
+	@make -C notification_images $@
+	@make -C scripts $@
+	@if [ $(PKGBUILD) -eq 1 ]; then \
+	  [ ! -e $(DESTDIR)$(libexecdir) ] && mkdir -p $(DESTDIR)$(libexecdir) \
+	  install allsky.sh $(DESTDIR)$(libexecdir)/allsky.sh; \
+        fi
+	@if [ $(PKGBUILD) -ne 1 ]; then \
+	  echo `date +%F\ %R:%S` Setting directory permissions...; \
+	  [ ! -e tmp ] && mkdir tmp; \
+	  chown -R $(SUDO_USER):$(SUDO_USER) ./ ; \
+	  echo ""; \
+	  echo ""; \
+	  echo `date +%F\ %R:%S` Install complete; \
+	  echo ""; \
+	  echo ""; \
+	fi
 endif
-
-sunwait:
-		git submodule init
-		git submodule update
-		$(MAKE) -C sunwait-src
-		cp sunwait-src/sunwait .
-
-capture:capture.cpp
-	$(CC)  capture.cpp lib/$(platform)/libASICamera2.a -o capture $(CFLAGS) $(OPENCV) -lusb-1.0
-
-startrails:startrails.cpp
-	$(CC)  startrails.cpp -o startrails $(CFLAGS) $(OPENCV)
-
-keogram:keogram.cpp
-	$(CC)  keogram.cpp -o keogram $(CFLAGS) $(OPENCV)
-
-clean:
-	rm -f capture startrails keogram
-#pkg-config libusb-1.0 --cflags --libs
-#pkg-config opencv --cflags --libs
-
+.PHONY : install
